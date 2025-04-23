@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MATAMATICAS</title>
+  <style>
+    /* --- Global Styles --- */
+    body { margin: 0; overflow: hidden; color: white; font-family: sans-serif; }
+    /* --- Start Screen Styles --- */
+    #startScreen { position: absolute; width: 100%; height: 100%; background: linear-gradient(to bottom,#83AF9B, #FE4365); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #333; }
+    .title { font-size: 80px; font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; margin-bottom: 20px; font-weight:bolder; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); color: #ffffff; line-height: 1; }
+    /* --- General Button Style --- */
+    .button { margin: 10px; padding: 15px 25px; border: none; border-radius: 25px; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); transition: background 0.2s ease-out, transform 0.1s ease-out, box-shadow 0.2s ease-out; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; min-width: 100px; text-align: center; }
+    #easyButton { background: linear-gradient(to bottom, #83AF9B, #6f9383); }
+    #mediumButton { background: linear-gradient(to bottom, #C8C8A9, #a9a98e); }
+    #hardButton { background: linear-gradient(to bottom, #F9CDAD, #d4ae91); }
+    #masterButton { background: linear-gradient(to bottom, #FC9D9A, #d78683); }
+    .button:hover { background: linear-gradient(to bottom, #FE4365, #d93a56); box-shadow: 0 6px 8px rgba(0, 0, 0, 0.25); transform: translateY(-2px); }
+    .button:active { background: linear-gradient(to bottom, #d93a56, #FE4365); box-shadow: 0 2px 3px rgba(0, 0, 0, 0.2); transform: translateY(1px); }
+    /* --- Tank Selection Styles --- */
+    #tankSelectionContainer { display: flex; justify-content: center; align-items: center; margin-top: 20px; margin-bottom: 15px; }
+    .tank-choice { width: 50px; height: 50px; background-size: contain; background-repeat: no-repeat; background-position: center center; margin: 0 10px; border: 3px solid transparent; border-radius: 5px; cursor: pointer; transition: transform 0.2s ease-out, border-color 0.2s ease-out; }
+    .tank-choice:hover { transform: scale(1.1); }
+    .tank-choice.selected { border-color: gold; transform: scale(1.15); box-shadow: 0 0 10px gold; }
+    /* --- Velocity Slider Styles --- */
+    .slider-container { margin-top: 15px; display: flex; align-items: center; justify-content: center; }
+    .slider-container label { margin-right: 10px; font-size: 24px; color: #333; }
+    .slider-container input[type="range"] { width: 150px; cursor: pointer; }
+    .slider-container::after { content: "🐢"; margin-left: 10px; font-size: 24px; color: #333; }
+    .slider-container span { margin-left: 10px; min-width: 40px; color: #333; }
+    /* --- Audio Controls Styling --- */
+    .audio-controls { margin-top: 20px; border: 1px solid #d78683; padding: 15px; border-radius: 8px; background-color: #FC9D9A; }
+    .audio-controls .control-group { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+    .audio-controls label { margin-right: 10px; min-width: 30px; text-align: right; font-size: 22px; color: #333; }
+    .audio-controls input[type="checkbox"] { margin-right: 20px; width: 18px; height: 18px; cursor: pointer; }
+    .audio-controls input[type="range"] { width: 150px; cursor: pointer; }
+    .audio-controls span { margin-left: 10px; min-width: 40px; color: #333; }
+    /* --- Game Screen Styles --- */
+    #gameScreen { display: none; position: absolute; width: 100%; height: 100%; overflow: hidden; cursor: none; background: linear-gradient( to bottom, #1a1a2e, #1f2a40, #2a3b57, #3b5070, #4c668a, #3b5070, #2a3b57, #1f2a40, #1a1a2e ); background-size: 100% 300%; background-position: 0 0; animation: scrollBgUp 8s linear infinite; z-index: 0; }
+    @keyframes scrollBgUp { from { background-position: 0 0; } to { background-position: 0 -200vh; } }
+    /* --- Game Elements --- */
+    #crosshair { position: absolute; width: 100px; height: 100px; background-image: url("img/PUNTODEMIRA.svg"); background-repeat: no-repeat; background-position: center center; background-size: contain; pointer-events: none; z-index: 11; }
+    #muzzleFlash { position: absolute; width: 60px; height: 60px; background: radial-gradient(circle, rgba(255,255,200,1) 0%, rgba(255,200,0,0.8) 30%, rgba(255,150,0,0) 70%); border-radius: 50%; transform: translate(-50%, -50%) scale(0); opacity: 0; pointer-events: none; transition: transform 0.1s ease-out, opacity 0.1s ease-out; z-index: 12; }
+    #muzzleFlash.flash-active { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    #crosshairOperation { position: absolute; display: none; padding: 4px 8px; background-color: rgba(0, 0, 0, 0.75); color: #0f0; font-size: 16px; font-weight: bold; border-radius: 4px; white-space: nowrap; pointer-events: none; z-index: 12; transform: translateX(-50%); }
+    .tank {
+        position: absolute;
+        width: 46px;
+        height: 80px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center center;
+        user-select: none;
+        z-index: 1; /* Tanks above background */
+        display: block;
+        visibility: visible;
+        opacity: 1;
+        pointer-events: none; /* ADDED: Prevent tanks blocking clicks below */
+    }
+    .tank .number { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -90%); color: white; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black, 0px 0px 3px black; pointer-events: none; z-index: 2; }
+    .tank.bonus .number { color: gold; font-size: 20px; }
+    #operation { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); font-size: 30px; color: #0f0; text-shadow: 1px 1px 2px black; z-index: 10; }
+    #score { position: absolute; top: 10px; left: 10px; font-size: 28px; font-family: 'Impact', Haettenschweiler, 'Arial Narrow Bold', sans-serif; font-weight: bold; color: #FFF; background-color: rgba(255, 0, 0, 0.6); padding: 8px 15px; border-radius: 10px; min-width: 50px; text-align: center; text-shadow: 1px 1px 2px black; z-index: 10; }
+    #bullets { position: absolute; bottom: 10px; right: 10px; font-size: 24px; color: #f00; line-height: 1; text-align: right; z-index: 10; text-shadow: 1px 1px 2px black; display: block; visibility: visible; }
+    #returnToMenuBtn {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        font-size: 24px;
+        padding: 10px 15px;
+        min-width: auto;
+        background: linear-gradient(to bottom, #6a6a6a, #4a4a4a);
+        z-index: 15; /* INCREASED Z-INDEX */
+        /* Inherits .button styles */
+    }
+    #returnToMenuBtn:hover { background: linear-gradient(to bottom, #FE4365, #d93a56); }
+    #returnToMenuBtn:active { background: linear-gradient(to bottom, #d93a56, #FE4365); }
+    /* --- Animation Styles --- */
+    @keyframes uiPulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
+    .ui-update-animation { animation: uiPulse 0.3s ease-out; }
+    @keyframes explosionBurst { 0% { transform: scale(0.5); opacity: 1; } 50% { opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
+    .explosion { position: absolute; width: 80px; height: 80px; background: radial-gradient(circle, rgba(255,255,180,1) 0%, rgba(255,150,0,0.7) 50%, rgba(200,0,0,0) 75%); border-radius: 50%; transform-origin: center center; pointer-events: none; z-index: 15; animation: explosionBurst 0.4s ease-out forwards; }
+    @keyframes particleFlyFade { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.3); } }
+    .particle { position: absolute; width: 8px; height: 8px; background-color: orange; border-radius: 50%; pointer-events: none; z-index: 14; opacity: 0; }
+    .particle.animate { opacity: 1; animation: particleFlyFade 0.6s ease-out forwards; }
+    /* --- Game Over Screen Styles --- */
+    #gameOverScreen { display: none; position: absolute; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
+    #gameOverScreen h1 { font-size: 50px; margin-bottom: 20px; color: white; text-shadow: 2px 2px 4px black;}
+    #gameOverScreen h3 { font-size: 18px; margin-bottom: 15px; color: #ccc; }
+    #gameOverScreen p { font-size: 30px; margin: 10px; color: white; }
+    #gameOverScreen .button { background: linear-gradient(to bottom, #6a6a6a, #4a4a4a); }
+    #gameOverScreen .button:hover { background: linear-gradient(to bottom, #FE4365, #d93a56); }
+    #gameOverScreen .button:active { background: linear-gradient(to bottom, #d93a56, #FE4365); }
+
+  </style>
+</head>
+<body>
+
+  <!-- Audio Elements -->
+  <audio id="bg-music" loop><source src="som/Aylex - Destiny (freetouse.com).mp3" type="audio/mpeg" /></audio>
+  <audio id="shoot-sound"><source src="som/cannon-shot-14799.mp3" type="audio/mpeg" /></audio>
+  <audio id="correct-sound"><source src="som/explosion-312361.mp3" type="audio/mpeg" /></audio>
+  <audio id="wrong-sound"><source src="som/failed-295059.mp3" type="audio/mpeg" /></audio>
+  <!-- <audio id="successSound" src="success.mp3" preload="auto"></audio> -->
+
+  <!-- Start screen -->
+  <div id="startScreen">
+      <div class ="title">MATAMATICAS</div>
+      <button class="button" id="easyButton">1 - 3</button>
+      <button class="button" id="mediumButton">4 - 7</button>
+      <button class="button" id="hardButton">6 - 9</button>
+      <button class="button" id="masterButton">2 - 9</button>
+      <div id="tankSelectionContainer">
+        <div class="tank-choice selected" data-tank-src="img/tank1.png" style="background-image: url('img/tank1.png');"></div>
+        <div class="tank-choice" data-tank-src="img/tank2.png" style="background-image: url('img/tank2.png');"></div>
+        <div class="tank-choice" data-tank-src="img/tank3.png" style="background-image: url('img/tank3.png');"></div>
+      </div>
+      <div class="slider-container">
+           <label for="velocitySlider">🐇</label>
+           <input type="range" id="velocitySlider" min="3" max="10" value="5" aria-label="Velocidad" />
+           <span id="velocityValue">5s</span>
+      </div>
+      <div class="audio-controls">
+          <div class="control-group"><label for="volumeSlider" aria-label="Volumen Música">🔊:</label><input type="range" id="volumeSlider" min="0" max="100" value="50"><span id="volumeValue">50%</span></div>
+           <div class="control-group"><label for="musicToggle" aria-label="Activar Música">🎶</label><input type="checkbox" id="musicToggle" checked></div>
+           <div class="control-group"><label for="effectsToggle" aria-label="Activar Efectos">💥</label><input type="checkbox" id="effectsToggle" checked></div>
+      </div>
+      <h4>𝄞 Aylex - Destiny (freetouse.com)<br>
+      Creado por Gabriel Díaz-Regañón para Ariel Ramim</h4>
+    </div>
+
+  <!-- Main game screen -->
+  <div id="gameScreen">
+    <div id="crosshair"></div>
+    <div id="muzzleFlash"></div>
+    <div id="crosshairOperation"></div>
+    <div id="operation"></div>
+    <div id="score">0</div>
+    <div id="bullets"></div>
+    <button class="button" id="returnToMenuBtn" title="Volver al Menú">↩</button>
+  </div>
+
+  <!-- Game Over screen -->
+  <div id="gameOverScreen">
+    <h1>Game Over</h1>
+    <h3>Parariel Produções</h3>
+    <h4>Creado por Gabriel Díaz-Regañón</h4>
+    <p id="finalScore"></p>
+    <button class="button" id="restartButton">🔄</button>
+  </div>
+
+  <!-- SCRIPTS AT THE VERY END -->
+   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
+  <script>
+    // --- Global Variables ---
+    let recentNumbers = []; const maxRecentNumbers = 7; let lastCorrectAnswer = null;
+    let selectedTankSrc = "img/tank1.png"; let masterVolume = 0.5; let isMusicEnabled = true; let isEffectsEnabled = true;
+    let gameConfig = { level: "easy", minFactor: 1, maxFactor: 3 };
+    let score = 0; let bullets = 15; const MAX_BULLETS = 15; let velocity = 5; let correctHits = 0;
+    let currentOperation = null; let circles = []; let spawnInterval = null; let lastTime = null; let animationFrame; let gameRunning = false;
+
+    // --- Grab HTML Elements ---
+    const bgMusic = document.getElementById('bg-music'); const shootSound = document.getElementById('shoot-sound'); const correctSound = document.getElementById('correct-sound'); const wrongSound = document.getElementById('wrong-sound');
+    const successSound = document.getElementById('successSound');
+    const gameScreen = document.getElementById("gameScreen"); const startScreen = document.getElementById("startScreen"); const gameOverScreen = document.getElementById("gameOverScreen");
+    const crosshair = document.getElementById("crosshair"); const muzzleFlash = document.getElementById("muzzleFlash"); const crosshairOperation = document.getElementById("crosshairOperation");
+    const operationDisplay = document.getElementById("operation"); const scoreDisplay = document.getElementById("score"); const bulletsDisplay = document.getElementById("bullets");
+    const finalScoreDisplay = document.getElementById("finalScore"); const velocitySlider = document.getElementById("velocitySlider"); const velocityValueDisplay = document.getElementById("velocityValue");
+    const volumeSlider = document.getElementById("volumeSlider"); const volumeValueDisplay = document.getElementById("volumeValue"); const musicToggle = document.getElementById("musicToggle"); const effectsToggle = document.getElementById("effectsToggle");
+    const tankSelectionContainer = document.getElementById('tankSelectionContainer');
+    const returnToMenuBtn = document.getElementById('returnToMenuBtn');
+    const restartButton = document.getElementById('restartButton');
+
+    // --- Element Checks ---
+    if (!bulletsDisplay) { console.error("CRITICAL ERROR: bulletsDisplay element NOT FOUND!"); }
+    if (!gameScreen) { console.error("CRITICAL ERROR: gameScreen element NOT FOUND!"); }
+
+    // --- Tank Selection Logic ---
+    tankSelectionContainer.addEventListener('click', function(event) {
+        const clickedChoice = event.target.closest('.tank-choice');
+        if (clickedChoice) {
+            const newSrc = clickedChoice.getAttribute('data-tank-src');
+            if (newSrc && newSrc !== selectedTankSrc) {
+                selectedTankSrc = newSrc;
+                document.querySelectorAll('.tank-choice').forEach(choice => choice.classList.remove('selected'));
+                clickedChoice.classList.add('selected');
+                localStorage.setItem('selectedTank', selectedTankSrc);
+            }
+        }
+    });
+
+    // --- Initial Audio Setup ---
+    document.addEventListener("click", enableAudio, { once: true });
+    function enableAudio() {
+        const sounds = [bgMusic, shootSound, correctSound, wrongSound, successSound];
+        sounds.forEach(sound => {
+            if (sound) {
+                sound.muted = true; sound.play().then(() => { sound.pause(); sound.currentTime = 0; sound.muted = false; }).catch(e => {});
+            }
+        });
+        if (isMusicEnabled) playBgMusic();
+    }
+
+    // --- Load/Save Settings ---
+    function loadSettings() {
+        const savedTank = localStorage.getItem("selectedTank"); if (savedTank) { selectedTankSrc = savedTank; }
+        document.querySelectorAll('.tank-choice').forEach(choice => { choice.classList.toggle('selected', choice.getAttribute('data-tank-src') === selectedTankSrc); });
+        velocity = localStorage.getItem("gameVelocity") || velocity; velocitySlider.value = velocity; velocityValueDisplay.textContent = velocity + 's';
+        masterVolume = parseFloat(localStorage.getItem("masterVolume") || masterVolume); volumeSlider.value = masterVolume * 100; volumeValueDisplay.textContent = `${Math.round(masterVolume * 100)}%`; if(bgMusic) bgMusic.volume = masterVolume;
+        isMusicEnabled = (localStorage.getItem("musicEnabled") !== 'false'); musicToggle.checked = isMusicEnabled;
+        isEffectsEnabled = (localStorage.getItem("effectsEnabled") !== 'false'); effectsToggle.checked = isEffectsEnabled;
+        if (!isMusicEnabled && bgMusic && !bgMusic.paused) { bgMusic.pause(); }
+    }
+
+    // --- Sound Control Functions ---
+    function playBgMusic() { if (isMusicEnabled && bgMusic && bgMusic.paused) { bgMusic.volume = masterVolume; bgMusic.play().catch(e => {}); } }
+    function stopBgMusic() { if(bgMusic) { bgMusic.pause(); bgMusic.currentTime = 0; } }
+    function playEffect(audioElement) { if (isEffectsEnabled && audioElement) { audioElement.volume = masterVolume; audioElement.currentTime = 0; audioElement.play().catch(error => {}); } }
+    function playShootSound() { playEffect(shootSound); }
+    function playCorrectSound() { playEffect(correctSound); }
+    function playWrongSound() { playEffect(wrongSound); }
+    function playSuccessSound() { if (successSound) { playEffect(successSound); } else { console.warn("Success sound element/file not found."); } }
+
+    // --- Explosion Function ---
+    function createExplosion(x, y) { const explosion = document.createElement('div'); explosion.className = 'explosion'; explosion.style.left = `${x - 40}px`; explosion.style.top = `${y - 40}px`; if (gameScreen) gameScreen.appendChild(explosion); setTimeout(() => { if (explosion.parentElement) gameScreen.removeChild(explosion); }, 400); const particleCount = 8; for (let i = 0; i < particleCount; i++) { const particle = document.createElement('div'); particle.className = 'particle'; particle.style.left = `${x - 4}px`; particle.style.top = `${y - 4}px`; const angle = Math.random() * Math.PI * 2; const distance = Math.random() * 50 + 20; const moveX = Math.cos(angle) * distance; const moveY = Math.sin(angle) * distance; setTimeout(() => { particle.style.transform = `translate(${moveX}px, ${moveY}px)`; particle.classList.add('animate'); }, 10); if (gameScreen) gameScreen.appendChild(particle); setTimeout(() => { if (particle.parentElement) gameScreen.removeChild(particle); }, 610); } }
+
+    // --- Start Screen Control Listeners ---
+    velocitySlider.addEventListener("input", function () { velocity = this.value; velocityValueDisplay.textContent = velocity + 's'; localStorage.setItem("gameVelocity", velocity); });
+    volumeSlider.addEventListener('input', function() { masterVolume = parseFloat(this.value) / 100; volumeValueDisplay.textContent = `${this.value}%`; if(bgMusic) bgMusic.volume = masterVolume; localStorage.setItem('masterVolume', masterVolume.toString()); });
+    musicToggle.addEventListener('change', function() { isMusicEnabled = this.checked; if (isMusicEnabled) playBgMusic(); else stopBgMusic(); localStorage.setItem('musicEnabled', isMusicEnabled.toString()); });
+    effectsToggle.addEventListener('change', function() { isEffectsEnabled = this.checked; localStorage.setItem('effectsEnabled', isEffectsEnabled.toString()); });
+
+    // --- Difficulty Buttons ---
+    document.getElementById("easyButton").addEventListener("click", function () { gameConfig = { level: "easy", minFactor: 1, maxFactor: 3 }; startGame(); });
+    document.getElementById("mediumButton").addEventListener("click", function () { gameConfig = { level: "medium", minFactor: 4, maxFactor: 7 }; startGame(); });
+    document.getElementById("hardButton").addEventListener("click", function () { gameConfig = { level: "hard", minFactor: 6, maxFactor: 9 }; startGame(); });
+    document.getElementById("masterButton").addEventListener("click", function () { gameConfig = { level: "master", minFactor: 2, maxFactor: 9 }; startGame(); });
+
+    // --- Crosshair Movement ---
+    gameScreen.addEventListener("mousemove", function (e) { if (!crosshair || !crosshairOperation) return; const chW = crosshair.offsetWidth / 2; const chH = crosshair.offsetHeight / 2; const chL = e.clientX - chW; const chT = e.clientY - chH; crosshair.style.left = chL + "px"; crosshair.style.top = chT + "px"; crosshairOperation.style.left = e.clientX + "px"; crosshairOperation.style.top = e.clientY + chH + 5 + "px"; });
+
+    // --- Shooting Mechanism ---
+    gameScreen.addEventListener("click", shootHandler);
+    document.addEventListener("keydown", function (e) { if (gameRunning && e.key === "Shift") shootHandler(e); });
+
+    // MODIFIED shootHandler
+    function shootHandler(e) {
+        if (!gameRunning || bullets <= 0) return; // Check before acting
+
+        playShootSound();
+
+        const chRect = crosshair.getBoundingClientRect(); const gameRect = gameScreen.getBoundingClientRect();
+        const flashX = chRect.left + chRect.width / 2 - gameRect.left; const flashY = chRect.top + chRect.height / 2 - gameRect.top;
+        muzzleFlash.style.left = `${flashX}px`; muzzleFlash.style.top = `${flashY}px`;
+        muzzleFlash.classList.add('flash-active'); crosshair.classList.add('shooting');
+        setTimeout(() => { muzzleFlash.classList.remove('flash-active'); crosshair.classList.remove('shooting'); }, 100);
+
+        let shotX, shotY;
+        if (e.type === "click" || e.type === "mousedown") { shotX = e.clientX - gameRect.left; shotY = e.clientY - gameRect.top; }
+        else if (e.type === "keydown" && e.key === "Shift") { shotX = flashX; shotY = flashY; }
+        else { return; }
+
+        bullets--; // Use bullet
+        updateBulletsDisplay(); // Update UI
+
+        // Check Game Over immediately after using bullet
+        if (bullets <= 0) {
+            console.log("shootHandler: Out of bullets, checking game over.");
+            checkGameOver(); // Will handle screen change if needed
+            return; // Stop further processing
+        }
+
+        let hit = false;
+        for (let i = circles.length - 1; i >= 0; i--) {
+            let c = circles[i];
+            if (!c || c.hit || !c.element || !c.element.parentElement) continue;
+            let circleRect = c.element.getBoundingClientRect();
+            let cx = circleRect.left + circleRect.width / 2 - gameRect.left;
+            let cy = circleRect.top + circleRect.height / 2 - gameRect.top;
+            let distance = Math.hypot(shotX - cx, shotY - cy);
+
+            if (distance < c.element.offsetWidth / 2) {
+                hit = true; c.hit = true;
+                const hitX = cx; const hitY = cy;
+                if (c.element.parentElement) gameScreen.removeChild(c.element);
+                createExplosion(hitX, hitY);
+                circles.splice(i, 1);
+
+                if (c.bonus) {
+                    bullets = Math.min(MAX_BULLETS, bullets + 2); updateBulletsDisplay(); showCrosshairIndicator("+2", flashX, flashY);
+                } else if (c.value === currentOperation.answer) {
+                    playCorrectSound(); score++; correctHits++; updateScore(); showCrosshairIndicator("✔", flashX, flashY);
+                } else {
+                    playWrongSound(); showCrosshairIndicator("✘", flashX, flashY);
+                }
+                break;
+            }
+        }
+
+        if (!hit) { playWrongSound(); showCrosshairIndicator("✘", shotX, shotY); }
+
+        // Check round win ONLY if game didn't end due to bullets
+        if (correctHits >= 3) {
+            clearRound();
+            setTimeout(() => { if(gameRunning) startRound(); }, 1000);
+        }
+        // No need for another checkGameOver here
+    }
+
+
+    // --- Feedback Indicator ---
+    function showCrosshairIndicator(symbol, x, y) { let indicator = document.createElement("div"); indicator.style.position = "absolute"; indicator.style.left = `${x - 15}px`; indicator.style.top = `${y - 15}px`; indicator.style.fontSize = "30px"; indicator.style.fontWeight = "bold"; indicator.style.zIndex = "20"; indicator.style.pointerEvents = "none"; indicator.style.textShadow = "1px 1px 3px rgba(0,0,0,0.7)"; switch(symbol) { case "✔": indicator.style.color = "lime"; break; case "✘": indicator.style.color = "red"; break; case "+2": indicator.style.color = "orange"; break; default: indicator.style.color = "white"; } indicator.innerText = symbol; if (gameScreen) gameScreen.appendChild(indicator); setTimeout(() => { if (indicator.parentElement) gameScreen.removeChild(indicator); }, 700); }
+
+    // --- UI Updates ---
+    function updateScore() { if (!scoreDisplay) return; scoreDisplay.innerText = score; scoreDisplay.classList.remove('ui-update-animation'); void scoreDisplay.offsetWidth; scoreDisplay.classList.add('ui-update-animation'); setTimeout(() => { scoreDisplay.classList.remove('ui-update-animation'); }, 300); }
+    function updateBulletsDisplay() { if (!bulletsDisplay) return; const bulletSymbol = "⁍"; const maxDisplayBullets = 12; let displayCount = Math.min(bullets, maxDisplayBullets); let symbols = ""; for (let i = 0; i < displayCount; i++) { symbols += bulletSymbol; if (i === 5) { symbols += "<br>"; } } if (bullets > maxDisplayBullets) { symbols += `<br>+${bullets - maxDisplayBullets}`; } bulletsDisplay.innerHTML = symbols; bulletsDisplay.classList.remove('ui-update-animation'); void bulletsDisplay.offsetWidth; bulletsDisplay.classList.add('ui-update-animation'); setTimeout(() => { bulletsDisplay.classList.remove('ui-update-animation'); }, 300); }
+
+    // --- Game State ---
+    function startGame() { console.log("startGame: Initiated."); score = 0; bullets = MAX_BULLETS; correctHits = 0; recentNumbers = []; lastCorrectAnswer = null; currentOperation = null; circles = []; gameRunning = true; updateScore(); updateBulletsDisplay(); startScreen.style.display = "none"; gameOverScreen.style.display = "none"; gameScreen.style.display = "block"; crosshairOperation.style.display = 'none'; playBgMusic(); startRound(); lastTime = performance.now(); if(animationFrame) cancelAnimationFrame(animationFrame); animationFrame = requestAnimationFrame(gameLoop); console.log("startGame: Completed."); }
+    function generateOperation() { let min = gameConfig.minFactor; let max = gameConfig.maxFactor; if (typeof min !== 'number' || typeof max !== 'number' || isNaN(min) || isNaN(max) || min > max) { console.error(`generateOperation: Invalid factors. Using defaults.`); min = 2; max = 9; } let a, b, attempts = 0; let newAnswer; const rangeSize = max - min + 1; if (rangeSize <= 0) { console.error(`generateOperation: Invalid range size.`); return null; } do { a = Math.floor(Math.random() * rangeSize) + min; b = Math.floor(Math.random() * rangeSize) + min; newAnswer = a * b; attempts++; } while (currentOperation && newAnswer === currentOperation.answer && attempts < 20); if (typeof a === 'number' && typeof b === 'number' && typeof newAnswer === 'number') { return { a: a, b: b, answer: newAnswer }; } else { console.error(`generateOperation: Failed to produce valid numbers.`); return null; } }
+    function startRound() { if (!gameRunning) return; /* console.log("Starting new round..."); */ if (currentOperation) { if (currentOperation.answer !== null) { lastCorrectAnswer = currentOperation.answer; if (!recentNumbers.includes(lastCorrectAnswer)) { recentNumbers.push(lastCorrectAnswer); if (recentNumbers.length > maxRecentNumbers) { recentNumbers.shift(); } } } } /* else { console.log("startRound: First round."); } */ correctHits = 0; currentOperation = generateOperation(); if (!currentOperation || typeof currentOperation.a !== 'number') { console.error("startRound: Failed to generate operation!"); goToMainMenu(); return; } const operationText = `${currentOperation.a} × ${currentOperation.b}`; operationDisplay.innerText = operationText; crosshairOperation.innerText = operationText; crosshairOperation.style.display = 'block'; /* console.log("startRound: Operation set:", operationText); */ circles.forEach(c => { if (c.element?.parentElement) gameScreen.removeChild(c.element); }); circles = []; if (spawnInterval) clearInterval(spawnInterval); /* console.log("startRound: Setting spawn interval."); */ spawnInterval = setInterval(spawnCircle, 500); if (!spawnInterval && spawnInterval !== 0) { console.error("!!! startRound: Failed to set spawn interval !!!"); } /* else { console.log("startRound: Spawn interval set ID:", spawnInterval); } */ }
+    function clearRound() { /* console.log("Clearing round..."); */ if (spawnInterval) clearInterval(spawnInterval); spawnInterval = null; circles.forEach((c) => { if (c.element?.parentElement) { c.element.style.transition = 'opacity 0.5s ease-out'; c.element.style.opacity = '0'; setTimeout(() => { if (c.element.parentElement) gameScreen.removeChild(c.element); }, 500); } }); setTimeout(() => { circles = []; }, 550); }
+
+    // --- Spawning Logic ---
+    function spawnCircle() { if (!gameRunning || !currentOperation || !gameScreen) return; let spawnElement; let valueToDisplay; let isBonus = false; let circleValue = null; isBonus = (Math.random() < 0.1); if (isBonus) { valueToDisplay = "+2"; } else { let isCorrect = Math.random() < 0.35; if (isCorrect) { circleValue = currentOperation.answer; } else { let maxAns = gameConfig.maxFactor * gameConfig.maxFactor; let minAns = gameConfig.minFactor * gameConfig.minFactor; let attempts = 0; let distractorValue; do { distractorValue = Math.floor(Math.random()*(maxAns-minAns+1))+minAns; attempts++; } while ((distractorValue === currentOperation.answer || distractorValue === lastCorrectAnswer || recentNumbers.includes(distractorValue)) && attempts < 20); if (distractorValue === currentOperation.answer || recentNumbers.includes(distractorValue)) { distractorValue = Math.floor(Math.random()*maxAns)+1; if (distractorValue === currentOperation.answer) distractorValue = (distractorValue % maxAns) + 1; } circleValue = distractorValue; if (!recentNumbers.includes(circleValue)) { recentNumbers.push(circleValue); if (recentNumbers.length > maxRecentNumbers) recentNumbers.shift(); } } valueToDisplay = circleValue; } spawnElement = document.createElement("div"); spawnElement.className = isBonus ? "tank bonus" : "tank"; spawnElement.style.backgroundImage = `url('${selectedTankSrc}')`; let tankWidth = 46; let x = Math.random() * (window.innerWidth - tankWidth); let y = -80 - (Math.random() * 20); x = Math.max(0, Math.min(x, window.innerWidth - tankWidth)); spawnElement.style.left = `${x}px`; spawnElement.style.top = `${y}px`; let numberSpan = document.createElement("span"); numberSpan.className = "number"; numberSpan.innerText = valueToDisplay; spawnElement.appendChild(numberSpan); if (!isBonus && circleValue !== null) { const hue = (circleValue * 25) % 360; spawnElement.style.filter = `hue-rotate(${hue}deg) brightness(90%)`; } let tankObj = { element: spawnElement, x: x, y: y, value: circleValue, bonus: isBonus, hit: false, spawnTime: performance.now() }; circles.push(tankObj); if (spawnElement) { gameScreen.appendChild(spawnElement); if (!spawnElement.parentElement) { console.error("!!! spawnCircle: Appending child FAILED !!!"); } } else { console.error("spawnCircle: Cannot append child. spawnElement is null."); } }
+
+    // --- Game Loop ---
+    function gameLoop(timestamp) { if (!gameRunning) { if(animationFrame) cancelAnimationFrame(animationFrame); animationFrame = null; return; } if (!lastTime) lastTime = timestamp; let delta = (timestamp - lastTime) / 1000; lastTime = timestamp; if (delta <= 0) { animationFrame = requestAnimationFrame(gameLoop); return; } if (delta > 0.5) delta = 0.5; let tankHeight = 80; let speed = (window.innerHeight + tankHeight) / velocity; for (let i = circles.length - 1; i >= 0; i--) { let c = circles[i]; if (!c || !c.element || c.hit || !c.element.parentElement) { if (!c?.element?.parentElement && circles.includes(c)) circles.splice(i, 1); continue; } c.y += speed * delta; if (!isNaN(c.y)) { c.element.style.top = `${c.y}px`; } else { console.error(`!!! Invalid Y calculated...`); c.hit = true; } if (c.y > window.innerHeight) { c.hit = true; if (c.element.parentElement) gameScreen.removeChild(c.element); circles.splice(i, 1); } } if (gameRunning) { animationFrame = requestAnimationFrame(gameLoop); } }
+
+    // --- Game Over Check ---
+    function checkGameOver() { if (bullets <= 0 && gameRunning) { console.log("Game Over triggered"); gameRunning = false; if(spawnInterval) clearInterval(spawnInterval); spawnInterval = null; if(animationFrame) cancelAnimationFrame(animationFrame); animationFrame = null; stopBgMusic(); finalScoreDisplay.innerText = "Pontos: " + score; gameOverScreen.style.display = "flex"; gameScreen.style.display = "none"; crosshairOperation.style.display = 'none'; setTimeout(() => { circles.forEach(c => { if(c.element?.parentElement) gameScreen.removeChild(c.element); }); circles = []; }, 100); } }
+
+    // --- Function to Go To Main Menu ---
+    function goToMainMenu() { console.log("Returning to main menu..."); gameRunning = false; if(spawnInterval) clearInterval(spawnInterval); spawnInterval = null; if(animationFrame) cancelAnimationFrame(animationFrame); animationFrame = null; stopBgMusic(); gameScreen.style.display = "none"; gameOverScreen.style.display = "none"; startScreen.style.display = "flex"; crosshairOperation.style.display = 'none'; correctHits = 0; recentNumbers = []; lastCorrectAnswer = null; currentOperation = null; circles.forEach(c => { if (c.element?.parentElement) gameScreen.removeChild(c.element); }); circles = []; loadSettings(); }
+
+    // --- Button Listeners ---
+    restartButton.addEventListener("click", goToMainMenu);
+    returnToMenuBtn.addEventListener("click", goToMainMenu);
+
+    // --- Initial Setup ---
+    loadSettings();
+
+  </script>
+</body>
+</html>
+<autor>Gabriel Díaz-Regañón</autor>
+<date>2024-10-01</date>
