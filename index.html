@@ -320,13 +320,70 @@
     function startGame() { console.log("startGame: Initiated."); score = 0; bullets = MAX_BULLETS; correctHits = 0; recentNumbers = []; lastCorrectAnswer = null; currentOperation = null; circles = []; gameRunning = true; updateScore(); updateBulletsDisplay(); startScreen.style.display = "none"; gameOverScreen.style.display = "none"; gameScreen.style.display = "block"; crosshairOperation.style.display = 'none'; playBgMusic(); startRound(); lastTime = performance.now(); if(animationFrame) cancelAnimationFrame(animationFrame); animationFrame = requestAnimationFrame(gameLoop); console.log("startGame: Completed."); }
     function generateOperation() { let min = gameConfig.minFactor; let max = gameConfig.maxFactor; if (typeof min !== 'number' || typeof max !== 'number' || isNaN(min) || isNaN(max) || min > max) { console.error(`generateOperation: Invalid factors. Using defaults.`); min = 2; max = 9; } let a, b, attempts = 0; let newAnswer; const rangeSize = max - min + 1; if (rangeSize <= 0) { console.error(`generateOperation: Invalid range size.`); return null; } do { a = Math.floor(Math.random() * rangeSize) + min; b = Math.floor(Math.random() * rangeSize) + min; newAnswer = a * b; attempts++; } while (currentOperation && newAnswer === currentOperation.answer && attempts < 20); if (typeof a === 'number' && typeof b === 'number' && typeof newAnswer === 'number') { return { a: a, b: b, answer: newAnswer }; } else { console.error(`generateOperation: Failed to produce valid numbers.`); return null; } }
     function startRound() { if (!gameRunning) return; /* console.log("Starting new round..."); */ if (currentOperation) { if (currentOperation.answer !== null) { lastCorrectAnswer = currentOperation.answer; if (!recentNumbers.includes(lastCorrectAnswer)) { recentNumbers.push(lastCorrectAnswer); if (recentNumbers.length > maxRecentNumbers) { recentNumbers.shift(); } } } } /* else { console.log("startRound: First round."); } */ correctHits = 0; currentOperation = generateOperation(); if (!currentOperation || typeof currentOperation.a !== 'number') { console.error("startRound: Failed to generate operation!"); goToMainMenu(); return; } const operationText = `${currentOperation.a} × ${currentOperation.b}`; operationDisplay.innerText = operationText; crosshairOperation.innerText = operationText; crosshairOperation.style.display = 'block'; /* console.log("startRound: Operation set:", operationText); */ circles.forEach(c => { if (c.element?.parentElement) gameScreen.removeChild(c.element); }); circles = []; if (spawnInterval) clearInterval(spawnInterval); /* console.log("startRound: Setting spawn interval."); */ spawnInterval = setInterval(spawnCircle, 500); if (!spawnInterval && spawnInterval !== 0) { console.error("!!! startRound: Failed to set spawn interval !!!"); } /* else { console.log("startRound: Spawn interval set ID:", spawnInterval); } */ }
-    function clearRound() { /* console.log("Clearing round..."); */ if (spawnInterval) clearInterval(spawnInterval); spawnInterval = null; circles.forEach((c) => { if (c.element?.parentElement) { c.element.style.transition = 'opacity 0.5s ease-out'; c.element.style.opacity = '0'; setTimeout(() => { if (c.element.parentElement) gameScreen.removeChild(c.element); }, 500); } }); setTimeout(() => { circles = []; }, 550); }
+    function clearRound() {
+        /* console.log("Clearing round..."); */
+        if (spawnInterval) clearInterval(spawnInterval);
+        spawnInterval = null;
+        // Immediately remove all tank elements from the DOM
+        circles.forEach((c) => {
+            if (c.element?.parentElement) {
+                gameScreen.removeChild(c.element);
+            }
+        });
+        // And clear the array. This is simple and avoids sync issues.
+        circles = [];
+    }
 
     // --- Spawning Logic ---
     function spawnCircle() { if (!gameRunning || !currentOperation || !gameScreen) return; let spawnElement; let valueToDisplay; let isBonus = false; let circleValue = null; isBonus = (Math.random() < 0.1); if (isBonus) { valueToDisplay = "+2"; } else { let isCorrect = Math.random() < 0.35; if (isCorrect) { circleValue = currentOperation.answer; } else { let maxAns = gameConfig.maxFactor * gameConfig.maxFactor; let minAns = gameConfig.minFactor * gameConfig.minFactor; let attempts = 0; let distractorValue; do { distractorValue = Math.floor(Math.random()*(maxAns-minAns+1))+minAns; attempts++; } while ((distractorValue === currentOperation.answer || distractorValue === lastCorrectAnswer || recentNumbers.includes(distractorValue)) && attempts < 20); if (distractorValue === currentOperation.answer || recentNumbers.includes(distractorValue)) { distractorValue = Math.floor(Math.random()*maxAns)+1; if (distractorValue === currentOperation.answer) distractorValue = (distractorValue % maxAns) + 1; } circleValue = distractorValue; if (!recentNumbers.includes(circleValue)) { recentNumbers.push(circleValue); if (recentNumbers.length > maxRecentNumbers) recentNumbers.shift(); } } valueToDisplay = circleValue; } spawnElement = document.createElement("div"); spawnElement.className = isBonus ? "tank bonus" : "tank"; spawnElement.style.backgroundImage = `url('${selectedTankSrc}')`; let tankWidth = 46; let x = Math.random() * (window.innerWidth - tankWidth); let y = -80 - (Math.random() * 20); x = Math.max(0, Math.min(x, window.innerWidth - tankWidth)); spawnElement.style.left = `${x}px`; spawnElement.style.top = `${y}px`; let numberSpan = document.createElement("span"); numberSpan.className = "number"; numberSpan.innerText = valueToDisplay; spawnElement.appendChild(numberSpan); if (!isBonus && circleValue !== null) { const hue = (circleValue * 25) % 360; spawnElement.style.filter = `hue-rotate(${hue}deg) brightness(90%)`; } let tankObj = { element: spawnElement, x: x, y: y, value: circleValue, bonus: isBonus, hit: false, spawnTime: performance.now() }; circles.push(tankObj); if (spawnElement) { gameScreen.appendChild(spawnElement); if (!spawnElement.parentElement) { console.error("!!! spawnCircle: Appending child FAILED !!!"); } } else { console.error("spawnCircle: Cannot append child. spawnElement is null."); } }
 
     // --- Game Loop ---
-    function gameLoop(timestamp) { if (!gameRunning) { if(animationFrame) cancelAnimationFrame(animationFrame); animationFrame = null; return; } if (!lastTime) lastTime = timestamp; let delta = (timestamp - lastTime) / 1000; lastTime = timestamp; if (delta <= 0) { animationFrame = requestAnimationFrame(gameLoop); return; } if (delta > 0.5) delta = 0.5; let tankHeight = 80; let speed = (window.innerHeight + tankHeight) / velocity; for (let i = circles.length - 1; i >= 0; i--) { let c = circles[i]; if (!c || !c.element || c.hit || !c.element.parentElement) { if (!c?.element?.parentElement && circles.includes(c)) circles.splice(i, 1); continue; } c.y += speed * delta; if (!isNaN(c.y)) { c.element.style.top = `${c.y}px`; } else { console.error(`!!! Invalid Y calculated...`); c.hit = true; } if (c.y > window.innerHeight) { c.hit = true; if (c.element.parentElement) gameScreen.removeChild(c.element); circles.splice(i, 1); } } if (gameRunning) { animationFrame = requestAnimationFrame(gameLoop); } }
+    function gameLoop(timestamp) {
+        if (!gameRunning) {
+            if(animationFrame) cancelAnimationFrame(animationFrame);
+            animationFrame = null;
+            return;
+        }
+        if (!lastTime) lastTime = timestamp;
+        let delta = (timestamp - lastTime) / 1000;
+        lastTime = timestamp;
+        if (delta <= 0) {
+            animationFrame = requestAnimationFrame(gameLoop);
+            return;
+        }
+        if (delta > 0.5) delta = 0.5; // Cap delta to prevent huge jumps if tab is inactive
+
+        let tankHeight = 80;
+        let speed = (window.innerHeight + tankHeight) / velocity;
+
+        for (let i = circles.length - 1; i >= 0; i--) {
+            let c = circles[i];
+
+            // Skip any invalid circle objects. This is a safety check.
+            if (!c || !c.element) {
+                circles.splice(i, 1);
+                continue;
+            }
+
+            // Move the tank
+            c.y += speed * delta;
+
+            // Check if the tank should be removed (either off-screen or has an invalid position)
+            if (isNaN(c.y) || c.y > window.innerHeight) {
+                if (c.element.parentElement) {
+                    gameScreen.removeChild(c.element);
+                }
+                circles.splice(i, 1); // Remove from the array
+            } else {
+                // If it's not being removed, update its position on the screen
+                c.element.style.top = `${c.y}px`;
+            }
+        }
+
+        if (gameRunning) {
+            animationFrame = requestAnimationFrame(gameLoop);
+        }
+    }
 
     // --- Game Over Check ---
     function checkGameOver() { if (bullets <= 0 && gameRunning) { console.log("Game Over triggered"); gameRunning = false; if(spawnInterval) clearInterval(spawnInterval); spawnInterval = null; if(animationFrame) cancelAnimationFrame(animationFrame); animationFrame = null; stopBgMusic(); finalScoreDisplay.innerText = "Pontos: " + score; gameOverScreen.style.display = "flex"; gameScreen.style.display = "none"; crosshairOperation.style.display = 'none'; setTimeout(() => { circles.forEach(c => { if(c.element?.parentElement) gameScreen.removeChild(c.element); }); circles = []; }, 100); } }
